@@ -80,8 +80,16 @@ public abstract class ImageWorker {
         @Override
         protected Bitmap doInBackground(Object... params) {
             data = params[0];
-            final Bitmap bitmap = processBitmap(data);
-            mImageCache.addBitmapToMemoryCache(String.valueOf(data), bitmap);
+            String dataString = String.valueOf(data);
+            Bitmap bitmap = null;
+            if (mImageCache != null) {
+                bitmap = mImageCache.getBitmapFromDiskCache(dataString);
+            }
+            if (bitmap == null) {
+                bitmap = processBitmap(data);
+                mImageCache.addBitmapToMemoryCache(dataString, bitmap);
+                mImageCache.addBitmapToDiskCache(dataString, bitmap);
+            }
             return bitmap;
         }
 
@@ -90,13 +98,19 @@ public abstract class ImageWorker {
             if (isCancelled()) {
                 bitmap = null;
             }
-            if (imageViewReference != null && bitmap != null) {
-                final ImageView imageView = imageViewReference.get();
-                final BitmapWorkerTask bitmapWorkerTask = getBitmapWorkerTask(imageView);
-                if (this == bitmapWorkerTask && imageView != null) {
+            final ImageView imageView = getAttachedImageView();
+            if (imageView != null && bitmap != null) {
                     imageView.setImageBitmap(bitmap);
-                }
             }
+        }
+
+        private ImageView getAttachedImageView() {
+            final ImageView imageView = imageViewReference.get();
+            final BitmapWorkerTask bitmapWorkerTask = getBitmapWorkerTask(imageView);
+            if (this == bitmapWorkerTask) {
+                return imageView;
+            }
+            return null;
         }
     }
 

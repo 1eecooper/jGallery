@@ -7,6 +7,7 @@ import android.graphics.BitmapFactory;
 import android.util.Log;
 
 import java.io.BufferedInputStream;
+import java.io.FileDescriptor;
 import java.io.IOException;
 import java.net.HttpURLConnection;
 import java.net.URL;
@@ -58,6 +59,16 @@ public class ImageDecoder extends ImageWorker {
         options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight);
         options.inJustDecodeBounds = false;
         return BitmapFactory.decodeFile(fileName, options);
+    }
+
+    public static Bitmap decodeSampledBitmapFromDescriptor(
+            FileDescriptor fileDescriptor, int reqWidth, int reqHeight) {
+        final BitmapFactory.Options options = new BitmapFactory.Options();
+        options.inJustDecodeBounds = true;
+        BitmapFactory.decodeFileDescriptor(fileDescriptor, null, options);
+        options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight);
+        options.inJustDecodeBounds = false;
+        return BitmapFactory.decodeFileDescriptor(fileDescriptor, null, options);
     }
 
     public static Bitmap decodeBitmapFromUrl(String urlPath, int reqWidth, int reqHeight) {

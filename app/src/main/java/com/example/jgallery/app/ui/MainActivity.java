@@ -20,6 +20,7 @@ public class MainActivity extends Activity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.grid);
         CustomGridView gridView = (CustomGridView)findViewById(R.id.gridview);
+        ImageCache.getInstance().init(this);
         mImageDecoder = new ImageDecoder(this);
         mImageDecoder.setLoadingImage(R.drawable.def);
         mAdapter = new ImageAdapter(this);
