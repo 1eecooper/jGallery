@@ -7,12 +7,17 @@ import android.graphics.BitmapFactory;
 import android.graphics.drawable.BitmapDrawable;
 import android.graphics.drawable.Drawable;
 import android.os.AsyncTask;
+import android.util.Log;
 import android.widget.ImageView;
 
 import java.lang.ref.WeakReference;
-import java.util.Objects;
 
 public abstract class ImageWorker {
+
+    private static final int MESSAGE_CLEAR = 0;
+    private static final int MESSAGE_FLUSH = 1;
+    private static final int MESSAGE_CLOSE = 2;
+    private static final int MESSAGE_INIT_DISK_CACHE = 4;
 
     protected Resources mResources;
     protected Bitmap mLoadingBitmap;
@@ -86,6 +91,7 @@ public abstract class ImageWorker {
                 bitmap = mImageCache.getBitmapFromDiskCache(dataString);
             }
             if (bitmap == null) {
+                Log.v(Utils.TAG,"_____ProcessBitmap");
                 bitmap = processBitmap(data);
                 mImageCache.addBitmapToMemoryCache(dataString, bitmap);
                 mImageCache.addBitmapToDiskCache(dataString, bitmap);
@@ -125,5 +131,68 @@ public abstract class ImageWorker {
         public BitmapWorkerTask getBitmapWorkerTask() {
             return bitmapWorkerTaskReference.get();
         }
+    }
+
+    protected class CacheAsyncTask extends AsyncTask<Object, Void, Void> {
+
+        @Override
+        protected Void doInBackground(Object... params) {
+            switch ((Integer)params[0]) {
+                case MESSAGE_CLEAR:
+                    clearCacheInternal();
+                    break;
+                case MESSAGE_FLUSH:
+                    flushCacheInternal();
+                    break;
+                case MESSAGE_CLOSE:
+                    closeCacheInternal();
+                    break;
+                case MESSAGE_INIT_DISK_CACHE:
+                    initDiskCacheInternal();
+                    break;
+            }
+            return null;
+        }
+    }
+
+    protected void clearCacheInternal() {
+        if (mImageCache != null) {
+            mImageCache.clearCache();
+        }
+    }
+
+    protected void flushCacheInternal() {
+        if (mImageCache != null) {
+            mImageCache.flush();
+        }
+    }
+
+    protected void closeCacheInternal() {
+        if (mImageCache != null) {
+            mImageCache.close();
+            mImageCache = null;
+        }
+    }
+
+    protected void initDiskCacheInternal() {
+        if (mImageCache != null) {
+            mImageCache.initDiskCache();
+        }
+    }
+
+    public void clearCache() {
+        new CacheAsyncTask().execute(MESSAGE_CLEAR);
+    }
+
+    public void flushCache() {
+        new CacheAsyncTask().execute(MESSAGE_FLUSH);
+    }
+
+    public void closeCache() {
+        new CacheAsyncTask().execute(MESSAGE_CLOSE);
+    }
+
+    public void initDiskCache() {
+        new CacheAsyncTask().execute(MESSAGE_INIT_DISK_CACHE);
     }
 }

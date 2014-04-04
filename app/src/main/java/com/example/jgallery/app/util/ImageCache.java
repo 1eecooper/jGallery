@@ -1,10 +1,14 @@
 package com.example.jgallery.app.util;
 
 import android.annotation.TargetApi;
+import android.app.Activity;
+import android.app.Fragment;
+import android.app.FragmentManager;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.os.AsyncTask;
 import android.os.Build;
+import android.os.Bundle;
 import android.os.Environment;
 import android.util.Log;
 import android.util.LruCache;
@@ -20,6 +24,8 @@ import java.security.NoSuchAlgorithmException;
 
 public class ImageCache {
 
+    private Context mContext;
+
     private static final int DISK_CACHE_INDEX = 0;
     private static final Bitmap.CompressFormat DEFAULT_COMPRESS_FORMAT = Bitmap.CompressFormat.JPEG;
     private static final int DEFAULT_COMPRESS_QUALITY = 70;
@@ -29,13 +35,14 @@ public class ImageCache {
     private final Object mDiskCacheLock = new Object();
     private boolean mDiskCacheStarting = true;
     private static final int DISK_CACHE_SIZE = 1024 * 1024 * 10; // 10MB
-    private static final String DISK_CACHE_SUBDIR = "thumbnails";
+    public static final String DISK_CACHE_SUBDIR = "thumbnails";
 
     private ImageCache() {
-        //init();
     }
 
-    public void init(Context context) {
+    public void initMemoryCache() {
+        RetainFragment retainFragment = RetainFragment.findOrCreateRetainFragment(((Activity) mContext).getFragmentManager());
+        mMemoryCache = retainFragment.mRetainedCache;
         if (mMemoryCache == null) {
             final int maxMemory = (int) (Runtime.getRuntime().maxMemory() / 1024);
             final int cacheSize = maxMemory / 8;
@@ -45,10 +52,23 @@ public class ImageCache {
                     return value.getByteCount() / 1024;
                 }
             };
+            retainFragment.mRetainedCache = mMemoryCache;
         }
-        if (mDiskCache == null) {
-            File cacheDir = getDiskCacheDir(context, DISK_CACHE_SUBDIR);
-            new InitDiskCacheTask().execute(cacheDir);
+    }
+
+    public void initDiskCache() {
+        File cacheDir = getDiskCacheDir(mContext, DISK_CACHE_SUBDIR);
+        synchronized (mDiskCacheLock) {
+            if (mDiskCache != null && !mDiskCache.isClosed()) {
+                mDiskCache = null;
+            }
+            try {
+                mDiskCache = DiskLruCache.open(cacheDir, 1, 1, DISK_CACHE_SIZE);
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+            mDiskCacheStarting = false;
+            mDiskCacheLock.notifyAll();
         }
     }
 
@@ -119,8 +139,8 @@ public class ImageCache {
                         inputStream = snapshot.getInputStream(DISK_CACHE_INDEX);
                         if (inputStream != null) {
                             FileDescriptor fd = ((FileInputStream) inputStream).getFD();
-                            bitmap = ImageDecoder.decodeSampledBitmapFromDescriptor(fd, Integer.MAX_VALUE, Integer.MAX_VALUE);
                             Log.v(Utils.TAG,"_____getBitmapFromDiskCache");
+                            bitmap = ImageDecoder.decodeSampledBitmapFromDescriptor(fd, Integer.MAX_VALUE, Integer.MAX_VALUE);
                         }
                     }
                 } catch (final IOException e) {
@@ -208,5 +228,76 @@ public class ImageCache {
             }
             return null;
         }
+    }
+
+    static class RetainFragment extends Fragment {
+        private static final String TAG = "RetainFragment";
+        public LruCache<String, Bitmap> mRetainedCache;
+
+        public RetainFragment() {}
+
+        public static RetainFragment findOrCreateRetainFragment(FragmentManager fm) {
+            RetainFragment fragment = (RetainFragment) fm.findFragmentByTag(TAG);
+            if (fragment == null) {
+                fragment = new RetainFragment();
+                fm.beginTransaction().add(fragment, TAG).commit();
+            }
+            return fragment;
+        }
+
+        @Override
+        public void onCreate(Bundle savedInstanceState) {
+            super.onCreate(savedInstanceState);
+            setRetainInstance(true);
+        }
+    }
+
+    public void clearCache() {
+        if (mMemoryCache != null) {
+            mMemoryCache.evictAll();
+        }
+        synchronized (mDiskCacheLock) {
+            mDiskCacheStarting = true;
+            if (mDiskCache != null && !mDiskCache.isClosed()) {
+                try {
+                    mDiskCache.delete();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+                mDiskCache = null;
+                initDiskCache();
+            }
+        }
+    }
+
+    public void flush() {
+        synchronized (mDiskCacheLock) {
+            if (mDiskCache != null) {
+                try {
+                    mDiskCache.flush();
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    public void close() {
+        synchronized (mDiskCacheLock) {
+            if (mDiskCache != null) {
+                try {
+                    if (!mDiskCache.isClosed()) {
+                        mDiskCache.close();
+                        mDiskCache = null;
+                    }
+                } catch (IOException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+    }
+
+    public void setContext(Context c) {
+        mContext = c;
     }
 }

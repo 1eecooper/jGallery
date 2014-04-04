@@ -16,6 +16,8 @@
 
 package com.example.jgallery.app.util;
 
+import android.util.Log;
+
 import java.io.BufferedInputStream;
 import java.io.BufferedWriter;
 import java.io.Closeable;
@@ -526,6 +528,7 @@ public final class DiskLruCache implements Closeable {
             entry = new Entry(key);
             lruEntries.put(key, entry);
         } else if (entry.currentEditor != null) {
+            Log.v(Utils.TAG, "_____ERROR: another edit is in progress");
             return null; // another edit is in progress
         }
 
