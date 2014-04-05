@@ -4,7 +4,6 @@ import android.content.Context;
 import android.content.res.Resources;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.util.Log;
 
 import java.io.BufferedInputStream;
 import java.io.FileDescriptor;
@@ -49,6 +48,10 @@ public class ImageDecoder extends ImageWorker {
         BitmapFactory.decodeResource(res, resId, options);
         options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight);
         options.inJustDecodeBounds = false;
+        if (Utils.hasHoneycomb()) {
+            addInBitmapOptions(options, ImageCache.getInstance());
+        }
+        options.inPreferredConfig = Bitmap.Config.RGB_565;
         return BitmapFactory.decodeResource(res, resId, options);
     }
 
@@ -58,16 +61,23 @@ public class ImageDecoder extends ImageWorker {
         BitmapFactory.decodeFile(fileName, options);
         options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight);
         options.inJustDecodeBounds = false;
+        if (Utils.hasHoneycomb()) {
+            addInBitmapOptions(options, ImageCache.getInstance());
+        }
+        options.inPreferredConfig = Bitmap.Config.RGB_565;
         return BitmapFactory.decodeFile(fileName, options);
     }
 
-    public static Bitmap decodeSampledBitmapFromDescriptor(
-            FileDescriptor fileDescriptor, int reqWidth, int reqHeight) {
+    public static Bitmap decodeSampledBitmapFromDescriptor(FileDescriptor fileDescriptor, int reqWidth, int reqHeight) {
         final BitmapFactory.Options options = new BitmapFactory.Options();
         options.inJustDecodeBounds = true;
         BitmapFactory.decodeFileDescriptor(fileDescriptor, null, options);
         options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight);
         options.inJustDecodeBounds = false;
+        if (Utils.hasHoneycomb()) {
+            addInBitmapOptions(options, ImageCache.getInstance());
+        }
+        options.inPreferredConfig = Bitmap.Config.RGB_565;
         return BitmapFactory.decodeFileDescriptor(fileDescriptor, null, options);
     }
 
@@ -84,6 +94,10 @@ public class ImageDecoder extends ImageWorker {
             in.reset();
             options.inSampleSize = calculateInSampleSize(options, reqWidth, reqHeight);
             options.inJustDecodeBounds = false;
+            if (Utils.hasHoneycomb()) {
+                addInBitmapOptions(options, ImageCache.getInstance());
+            }
+            options.inPreferredConfig = Bitmap.Config.RGB_565;
             return BitmapFactory.decodeStream(in, null, options);
         } catch (final IOException e) {
             e.printStackTrace();
@@ -114,4 +128,13 @@ public class ImageDecoder extends ImageWorker {
         return inSampleSize;
     }
 
+    private static void addInBitmapOptions(BitmapFactory.Options options, ImageCache cache) {
+        options.inMutable = true;
+        if (cache != null) {
+            Bitmap inBitmap = cache.getBitmapFromReusableSet(options);
+            if (inBitmap != null) {
+                options.inBitmap = inBitmap;
+            }
+        }
+    }
 }

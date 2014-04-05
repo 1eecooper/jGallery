@@ -21,18 +21,16 @@ public abstract class ImageWorker {
 
     protected Resources mResources;
     protected Bitmap mLoadingBitmap;
-    private ImageCache mImageCache;
 
     public ImageWorker(Context context) {
         mResources = context.getResources();
-        mImageCache = ImageCache.getInstance();
     }
 
     protected abstract Bitmap processBitmap(Object data);
 
     public void loadBitmap (Object data, ImageView imageView) {
         final String imageKey = String.valueOf(data);
-        final Bitmap bitmap = mImageCache.getBitmapFromMemCache(imageKey);
+        final Bitmap bitmap = ImageCache.getInstance().getBitmapFromMemCache(imageKey);
         if (bitmap != null) {
             imageView.setImageBitmap(bitmap);
         } else {
@@ -87,14 +85,14 @@ public abstract class ImageWorker {
             data = params[0];
             String dataString = String.valueOf(data);
             Bitmap bitmap = null;
-            if (mImageCache != null) {
-                bitmap = mImageCache.getBitmapFromDiskCache(dataString);
+            if (ImageCache.getInstance() != null) {
+                bitmap = ImageCache.getInstance().getBitmapFromDiskCache(dataString);
             }
             if (bitmap == null) {
                 Log.v(Utils.TAG,"_____ProcessBitmap");
                 bitmap = processBitmap(data);
-                mImageCache.addBitmapToMemoryCache(dataString, bitmap);
-                mImageCache.addBitmapToDiskCache(dataString, bitmap);
+                ImageCache.getInstance().addBitmapToMemoryCache(dataString, bitmap);
+                ImageCache.getInstance().addBitmapToDiskCache(dataString, bitmap);
             }
             return bitmap;
         }
@@ -156,27 +154,26 @@ public abstract class ImageWorker {
     }
 
     protected void clearCacheInternal() {
-        if (mImageCache != null) {
-            mImageCache.clearCache();
+        if (ImageCache.getInstance() != null) {
+            ImageCache.getInstance().clearCache();
         }
     }
 
     protected void flushCacheInternal() {
-        if (mImageCache != null) {
-            mImageCache.flush();
+        if (ImageCache.getInstance() != null) {
+            ImageCache.getInstance().flush();
         }
     }
 
     protected void closeCacheInternal() {
-        if (mImageCache != null) {
-            mImageCache.close();
-            mImageCache = null;
+        if (ImageCache.getInstance() != null) {
+            ImageCache.getInstance().close();
         }
     }
 
     protected void initDiskCacheInternal() {
-        if (mImageCache != null) {
-            mImageCache.initDiskCache();
+        if (ImageCache.getInstance() != null) {
+            ImageCache.getInstance().initDiskCache();
         }
     }
 

@@ -6,6 +6,7 @@ import android.app.Fragment;
 import android.app.FragmentManager;
 import android.content.Context;
 import android.graphics.Bitmap;
+import android.graphics.BitmapFactory;
 import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
@@ -19,8 +20,13 @@ import java.io.FileInputStream;
 import java.io.IOException;
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.lang.ref.SoftReference;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.util.Collections;
+import java.util.HashSet;
+import java.util.Iterator;
+import java.util.Set;
 
 public class ImageCache {
 
@@ -37,10 +43,15 @@ public class ImageCache {
     private static final int DISK_CACHE_SIZE = 1024 * 1024 * 10; // 10MB
     public static final String DISK_CACHE_SUBDIR = "thumbnails";
 
+    private Set<SoftReference<Bitmap>> mReusableBitmaps;
+
     private ImageCache() {
     }
 
     public void initMemoryCache() {
+        if (Utils.hasHoneycomb()) {
+            mReusableBitmaps = Collections.synchronizedSet(new HashSet<SoftReference<Bitmap>>());
+        }
         RetainFragment retainFragment = RetainFragment.findOrCreateRetainFragment(((Activity) mContext).getFragmentManager());
         mMemoryCache = retainFragment.mRetainedCache;
         if (mMemoryCache == null) {
@@ -50,6 +61,15 @@ public class ImageCache {
                 @Override
                 protected int sizeOf(String key, Bitmap value) {
                     return value.getByteCount() / 1024;
+                }
+
+                @Override
+                protected void entryRemoved(boolean evicted, String key, Bitmap oldValue, Bitmap newValue) {
+                    super.entryRemoved(evicted, key, oldValue, newValue);
+                    if (Utils.hasHoneycomb()) {
+                        mReusableBitmaps.add(new SoftReference<Bitmap>(oldValue));
+
+                    }
                 }
             };
             retainFragment.mRetainedCache = mMemoryCache;
@@ -209,7 +229,7 @@ public class ImageCache {
     }
 
 
-    public static class ImageCacheHolder {
+    private static class ImageCacheHolder {
         public static final ImageCache INSTANCE = new ImageCache();
     }
 
@@ -300,4 +320,54 @@ public class ImageCache {
     public void setContext(Context c) {
         mContext = c;
     }
+
+    protected Bitmap getBitmapFromReusableSet(BitmapFactory.Options options) {
+        Bitmap bitmap = null;
+        if (mReusableBitmaps != null && !mReusableBitmaps.isEmpty()) {
+            synchronized (mReusableBitmaps) {
+                final Iterator<SoftReference<Bitmap>> iterator = mReusableBitmaps.iterator();
+                Bitmap item;
+                while (iterator.hasNext()) {
+                    item = iterator.next().get();
+                    if (null != item && item.isMutable()) {
+                        if (canUseForInBitmap(item, options)) {
+                            Log.v(Utils.TAG, "_____Can use for InBitmap");
+                            bitmap = item;
+                            iterator.remove();
+                            break;
+                        }
+                    } else {
+                        iterator.remove();
+                    }
+                }
+            }
+        }
+        return bitmap;
+    }
+
+    static boolean canUseForInBitmap(Bitmap candidate, BitmapFactory.Options targetOptions) {
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.KITKAT) {
+            int width = targetOptions.outWidth / targetOptions.inSampleSize;
+            int height = targetOptions.outHeight / targetOptions.inSampleSize;
+            int byteCount = width * height * getBytesPerPixel(candidate.getConfig());
+            return byteCount <= candidate.getAllocationByteCount();
+        }
+        return candidate.getWidth() == targetOptions.outWidth
+                && candidate.getHeight() == targetOptions.outHeight
+                && targetOptions.inSampleSize == 1;
+    }
+
+    static int getBytesPerPixel(Bitmap.Config config) {
+        if (config == Bitmap.Config.ARGB_8888) {
+            return 4;
+        } else if (config == Bitmap.Config.RGB_565) {
+            return 2;
+        } else if (config == Bitmap.Config.ARGB_4444) {
+            return 2;
+        } else if (config == Bitmap.Config.ALPHA_8) {
+            return 1;
+        }
+        return 1;
+    }
+
 }

@@ -16,16 +16,14 @@ public class MainActivity extends Activity {
 
     private ImageAdapter mAdapter;
     private ImageDecoder mImageDecoder;
-    private ImageCache mImageCache;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.grid);
         CustomGridView gridView = (CustomGridView)findViewById(R.id.gridview);
-        mImageCache = ImageCache.getInstance();
-        mImageCache.setContext(this);
-        mImageCache.initMemoryCache();
+        ImageCache.getInstance().setContext(this);
+        ImageCache.getInstance().initMemoryCache();
         mImageDecoder = new ImageDecoder(this);
         mImageDecoder.setLoadingImage(R.drawable.def);
         mAdapter = new ImageAdapter(this);
