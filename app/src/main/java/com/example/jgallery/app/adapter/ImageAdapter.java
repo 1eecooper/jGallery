@@ -7,7 +7,6 @@ import android.widget.BaseAdapter;
 import android.widget.GridView;
 import android.widget.ImageView;
 
-import com.example.jgallery.app.R;
 import com.example.jgallery.app.provider.Images;
 import com.example.jgallery.app.ui.MainActivity;
 import com.example.jgallery.app.util.ImageDecoder;
@@ -18,7 +17,7 @@ public class ImageAdapter extends BaseAdapter {
 
     private Context mContext;
     private ImageDecoder mImageDecoder;
-    private ArrayList<String> mThumbFromPictureFolder;
+    private ArrayList<String> mThumbnails = new ArrayList<String>();
     private GridView.LayoutParams mGridViewLayoutParams = new GridView.LayoutParams(ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT);
 
     public ImageAdapter(Context c){
@@ -26,12 +25,13 @@ public class ImageAdapter extends BaseAdapter {
         if (mContext instanceof MainActivity) {
             mImageDecoder = ((MainActivity)mContext).getImageDecoder();
         }
-        mThumbFromPictureFolder = Images.getImagesFromDevice();
+        mThumbnails.addAll(Images.getImagesFromDevice());
+        mThumbnails.addAll(Images.getImagesFromUrl());
     }
 
     @Override
     public int getCount() {
-        return mThumbFromPictureFolder.size();
+        return mThumbnails.size();
     }
 
     @Override
@@ -53,7 +53,7 @@ public class ImageAdapter extends BaseAdapter {
         } else {
             imageView = (ImageView) view;
         }
-        mImageDecoder.loadBitmap(mThumbFromPictureFolder.get(i), imageView);
+        mImageDecoder.loadBitmap(mThumbnails.get(i), imageView);
         return imageView;
     }
 

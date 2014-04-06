@@ -7,7 +7,6 @@ import android.app.FragmentManager;
 import android.content.Context;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
-import android.os.AsyncTask;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Environment;
@@ -62,7 +61,6 @@ public class ImageCache {
                 protected int sizeOf(String key, Bitmap value) {
                     return value.getByteCount() / 1024;
                 }
-
                 @Override
                 protected void entryRemoved(boolean evicted, String key, Bitmap oldValue, Bitmap newValue) {
                     super.entryRemoved(evicted, key, oldValue, newValue);
@@ -144,7 +142,6 @@ public class ImageCache {
     public Bitmap getBitmapFromDiskCache(String data) {
         final String key = hashKeyForDisk(data);
         Bitmap bitmap = null;
-
         synchronized (mDiskCacheLock) {
             while (mDiskCacheStarting) {
                 try {
@@ -231,23 +228,6 @@ public class ImageCache {
 
     private static class ImageCacheHolder {
         public static final ImageCache INSTANCE = new ImageCache();
-    }
-
-    class InitDiskCacheTask extends AsyncTask<File, Void, Void> {
-        @Override
-        protected Void doInBackground(File... params) {
-            synchronized (mDiskCacheLock) {
-                File cacheDir = params[0];
-                try {
-                    mDiskCache = DiskLruCache.open(cacheDir, 1, 1, DISK_CACHE_SIZE);
-                } catch (IOException e) {
-                    e.printStackTrace();
-                }
-                mDiskCacheStarting = false;
-                mDiskCacheLock.notifyAll();
-            }
-            return null;
-        }
     }
 
     static class RetainFragment extends Fragment {

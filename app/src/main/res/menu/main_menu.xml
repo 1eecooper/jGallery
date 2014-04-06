@@ -2,6 +2,6 @@
 
 <menu xmlns:android="http://schemas.android.com/apk/res/android">
     <item android:id="@+id/clear_cache"
-        android:title="Clear caches"
+        android:title="@string/clear_caches"
         android:showAsAction="never"/>
 </menu>

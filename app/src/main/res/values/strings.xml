@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">jGallery</string>
+    <string name="clear_caches">Clear caches</string>
 </resources>
