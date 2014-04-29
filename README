@@ -1,8 +1,7 @@
 Simple Android Gallery
 
-As a customer I want to have an Android application which will display dynamic image gallery (activity layout) consisting of 40-50 images.
-As a customer I want to have images within the application represented in the source code as external Internet resources by their URL addresses.
-As a customer I want to have an Android application which will start preloading images when launched.
-As a customer I want to see 10 images per page and be able to scroll over all items within an image gallery.
-As a customer I want to be able to rotate the gallery while rotating the device so that the cache with preloaded images is preserved.
-As a customer I want to have an Android application with optimized memory usage.
+- displays dynamic image gallery from Picture folder and from URL list
+- starts preloading images when launched
+- shows 10 images per page, is able to scroll over all items within an image gallery
+- uses both memory and disk caches
+- supports optimized memory usage
